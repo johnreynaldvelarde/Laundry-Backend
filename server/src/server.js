@@ -33,25 +33,30 @@ const allowedOrigins = [
 ];
 
 app.use(express.json());
+app.use(cookieParser());
+
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Log the origin to help debug CORS issues
+      console.log("Request origin:", origin);
+
       if (process.env.NODE_ENV === "production") {
         if (allowedOrigins.includes(origin) || !origin) {
           callback(null, true);
         } else {
+          console.error(`CORS blocked request from origin: ${origin}`);
           callback(new Error("Not allowed by CORS"));
         }
       } else {
-        callback(null, true);
+        callback(null, true); // Allow all origins in development
       }
     },
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
+    credentials: true, // Allow cookies to be sent
   })
 );
-app.use(cookieParser());
 
 app.use(
   "/api",
