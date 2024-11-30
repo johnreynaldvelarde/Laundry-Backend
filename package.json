@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "express": "^4.21.1",
-    "moment-timezone": "^0.5.46"
-  }
-}
