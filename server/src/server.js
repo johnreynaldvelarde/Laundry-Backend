@@ -38,9 +38,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Log the origin to help debug CORS issues
       console.log("Request origin:", origin);
-
       if (process.env.NODE_ENV === "production") {
         if (allowedOrigins.includes(origin) || !origin) {
           callback(null, true);
