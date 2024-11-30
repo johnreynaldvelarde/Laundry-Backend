@@ -1,0 +1,36 @@
+// const createDefaultAdmin = async (db) => {
+//   const query = 'SELECT COUNT(*) AS count FROM User_Account';
+//   db.query(query, async (err, results) => {
+//     if (err) throw err;
+
+//     const userCount = results[0].count;
+//     if (userCount === 0) {
+//       const username = 'admin';
+//       const firstName = 'Admin';
+//       const lastName = 'User';
+//       const email = 'admin@example.com';
+//       const password = 'admin123';
+//       const hashedPassword = await bcrypt.hash(password, 10);
+//       const passwordSalt = await bcrypt.genSalt(10);
+
+//       const insertAccountQuery = `INSERT INTO User_Account 
+//         (username, first_name, last_name, email, isRole, isOnline, isStatus, date_created) 
+//         VALUES (?, ?, ?, ?, 0, FALSE, TRUE, NOW())`;
+
+//       db.query(insertAccountQuery, [username, firstName, lastName, email], (err, accountResults) => {
+//         if (err) throw err;
+
+//         const userId = accountResults.insertId;
+
+//         const insertSecurityQuery = `INSERT INTO User_Security 
+//           (user_id, password, password_salt, mfa_enabled, failed_login_attempts, account_locked) 
+//           VALUES (?, ?, ?, FALSE, 0, FALSE)`;
+
+//         db.query(insertSecurityQuery, [userId, hashedPassword, passwordSalt], (err) => {
+//           if (err) throw err;
+//           console.log('Default admin account created.');
+//         });
+//       });
+//     }
+//   });
+// };

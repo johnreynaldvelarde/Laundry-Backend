@@ -1,0 +1,543 @@
+---> User_Account <---
+id
+store_id (Foregin Key) CAN BE NULL
+address_id (Foregin Key) CAN BE NULL
+role_permissions_id (Foregin Key) CAN BE NULL if User Account is Customer based on user_type
+username
+email
+mobile_number
+first_name
+middle_name
+last_name
+user_type (Manager or Customer or etc)
+isVerifiedEmail // for customer only
+isOnline
+isAgreement
+isStatus
+isArchive
+date_created
+
+---> User_Security <---
+id
+user_id (Foregin Key)
+password
+password_salt
+last_login
+last_logout
+last_password_change
+
+
+
+---> Notifications <---
+id
+store_id (Foregin Key)
+user_id (Foregin Key)
+notification_type
+notification_description
+status  ( "Unread", "Read", "Archived")
+created_at
+read_at
+
+
+
+---> Conversations <---
+id (Primary Key)
+user_one_id (Foregin Key)
+user_two_id (Foregin Key)
+last_message_id
+last_message_date
+created_at
+updated_at
+
+---> Messages <---
+id (Primary Key)
+conversation_id (Foregin Key)
+sender_id (Foregin Key)
+recipient_id (Foregin Key)
+message
+is_read
+date_sent
+date_read
+
+
+
+--> Addresses <--
+id (Primary Key)
+address_line
+country
+region
+province
+city
+postal_code
+latitude
+longitude
+updated_at
+
+
+Roles_Permissions
+id
+role_name
+can_read
+can_write
+can_edit
+can_delete
+date_created
+isArchive
+
+
+
+
+
+--> Service_Promo <--
+id (Primary Key)
+service_id (Foregin Key)
+discount_price
+valid_days (IF valid on Monday, Tuesday, Wednesday, Thursday, Friday , Saturday, Sunday)
+start_date
+end_date
+isActive 
+date_created
+isArchive
+
+--> Service_Type <--
+id (Primary Key)
+store_id (Foregin Key)
+service_name
+description
+default_price
+date_created
+isArchive
+
+--> Service_Request <--
+id (Primary Key)
+store_id (Foregin Key)
+user_id (Foregin Key)
+customer_id (Foregin Key)
+service_type_id (Foregin Key)
+tracking_code
+queue_number,
+customer_fullname
+customer_type
+notes
+request_date
+pickup_date
+delivery_date
+request_status
+qr_code
+qr_code_generated (BOOLEAN)
+isPickup (BOOLEAN)
+isDelivery  (BOOLEAN)
+payment_method
+
+--> Laundry_Assignment <--
+id (Primary Key)
+service_request_id (Foregin Key)
+unit_id (Foregin Key)
+assigned_by (Foregin Key)
+weight
+assigned_at 
+completed_at
+isAssignmentStatus 0 = In Progress, 1 = Completed, 2 = Canceled
+isCompleted
+
+--> Transactions <--
+id (Primary Key)
+store_id (Foregin Key)
+assignment_id (Foregin Key)
+transaction_code,
+total_amount,
+payment_method,
+status (Completed or Pending)
+created_at
+updated_at
+
+--> Feedback_Review <--
+id (Primary Key)
+store_id (Foregin Key)
+customer_id (Foregin Key)
+service_request_id (Foregin Key)
+rating
+comment
+created_at
+updated_at
+is_approved
+response
+response_created_at
+
+--> Related_Item <--
+id (Primary Key)
+assigment_id (Foregin Key)
+inventory_id (Foregin Key)
+quantity,
+amount,
+
+
+--> Inventory <--
+id (Primary Key)
+store_id (Foregin Key)
+item_id (Foregin Key)
+price
+quantity
+isStatus
+
+User_Account
+id
+store_id (Foregin Key)
+role_permissions_id (Foregin Key)
+username
+email
+mobile_number
+first_name
+middle_name
+last_name
+isOnline
+isStatus
+isArchive
+date_created
+
+Roles_Permissions
+id
+role_name
+can_read
+can_write
+can_edit
+can_delete
+date_created
+isArchive
+
+User_Securty
+id
+user_id (Foregin Key)
+password
+password_salt
+mfa_enabled
+mfa_secret
+failed_login_attempts
+account_locked
+lockout_time
+last_login
+last_logout
+last_password_change
+
+Customer
+id (Primary Key)
+store_id (Foregin Key)
+address_id (Foregin Key)  
+c_firstname
+c_middlename
+c_lastname
+c_username
+c_number
+c_email
+isAgreement
+isOnline
+isArchive
+date_created
+
+Customer_Securty
+id (Primary Key)
+customer_id (Foregin Key)
+c_password
+c_password_salt
+mfa_enabled
+mfa_secret
+failed_login_attempts
+account_locked
+lockout_time
+last_login
+last_logout
+last_password_change
+
+
+--> Stores <--
+id (Primary Key)
+address_id (Foregin Key)
+store_no
+store_name
+store_contact
+store_email
+is_main_store
+updated_at
+date_created
+isStatus
+isArchive
+
+--> Addresses <--
+id (Primary Key)
+address_line
+country
+province
+city
+postal_code
+latitude
+longitude
+updated_at
+
+Laundry_Unit
+id  (Primary Key)
+store_id (Foregin Key)
+unit_name
+date_created
+isUnitStatus (0 -> its Available, 1 -> its occupied  2 -> its Reserved 3 -> In Maintainance)
+isArchive
+
+--> Item Category <--
+id (Primary Key)
+category_name
+isArchive
+updated_at
+date_created
+
+--> Item <--
+id (Primary Key)
+category_id (Foregin Key)
+store_id (Foregin Key)
+item_name
+isArchive
+updated_at
+date_created
+
+--> Inventory <--
+id (Primary Key)
+store_id (Foregin Key)
+item_id (Foregin Key)
+price
+quantity
+isStatus
+isArchive
+
+--> Laundry_Unit <--
+id  (Primary Key)
+store_id (Foregin Key)
+unit_name
+date_created
+isUnitStatus (0 -> its Available, 1 -> its occupied  2 -> its Reserved 3 -> In Maintainance)
+isArchive
+
+--> Service_Request <--
+id (Primary Key)
+store_id (Foregin Key)
+user_id (Foregin Key)
+customer_id (Foregin Key)
+service_type_id (Foregin Key)
+tracking_code
+customer_fullname
+customer_type
+notes
+request_date
+pickup_date
+delivery_date
+request_status
+qr_code
+qr_code_generated (BOOLEAN)
+isPickup (BOOLEAN)
+isDelivery  (BOOLEAN)
+payment_method
+
+
+--> Service_Type <--
+id (Primary Key)
+store_id (Foregin Key)
+service_name
+default_price
+date_created
+isArchive
+
+--> Service_Promotions <--
+id (Primary Key)
+service_id (Foregin Key)
+discount_percentage
+discount_price
+valid_days
+start_date
+end_date
+isActive
+date_created
+isArchive
+
+--> Activity Log <--
+id (Primary Key)
+user_id (Foregin Key)
+user_type 
+action_type
+action_description
+timestamp
+
+--> Laundry_Assignment <--
+id (Primary Key)
+service_request_id (Foregin Key)
+unit_id (Foregin Key)
+assigned_by (Foregin Key)
+weight
+assigned_at 
+completed_at
+isAssignmentStatus 0 = In Progress, 1 = Completed, 2 = Canceled
+isCompleted
+
+--> Transaction <--
+id (Primary Key)
+store_id (Foregin Key)
+assignment_id (Foregin Key)
+total_amount,
+payment_method,
+status
+created_at
+updated_at
+
+
+--> Related_Item <--
+id (Primary Key)
+assigment_id (Foregin Key)
+inventory_id (Foregin Key)
+quantity,
+amount,
+
+
+--> User_Account <--
+id
+store_id (Foregin Key)
+role_permissions_id (Foregin Key)
+username
+email
+mobile_number
+first_name
+middle_name
+last_name
+isOnline
+isStatus
+isArchive
+date_created
+
+--> Customer <--
+id (Primary Key)
+store_id (Foregin Key)
+address_id (Foregin Key)  
+c_firstname
+c_middlename
+c_lastname
+c_username
+c_number
+c_email
+isAgreement
+isOnline
+isArchive
+date_created
+
+sender_type
+receiver_type
+
+
+
+
+
+ sr.store_id = ? AND sr.request_status = 'In Queue'
+
+--> Service_Progress <--
+id (Primary Key)
+service_request_id (Foregin Key)
+stage
+description
+status_date
+completed
+false_description
+
+--> Service_Request <--
+id (Primary Key)
+store_id (Foregin Key)
+user_id (Foregin Key)
+customer_id (Foregin Key)
+service_type_id (Foregin Key)
+tracking_code
+customer_fullname
+customer_type
+notes
+request_date
+pickup_date
+delivery_date
+request_status
+qr_code
+qr_code_generated (BOOLEAN)
+isPickup (BOOLEAN)
+isDelivery  (BOOLEAN)
+
+--> Laundry_Assignment <--
+id (Primary Key)
+service_request_id (Foregin Key)
+unit_id (Foregin Key)
+assigned_by (Foregin Key)
+weight
+assigned_at 
+completed_at
+isAssignmentStatus 0 = In Progress, 1 = Completed, 2 = Canceled
+isCompleted
+
+--> Transaction <--
+id (Primary Key)
+store_id (Foregin Key)
+assigment_id (Foregin Key)
+qr_code
+total_amount,
+transaction_date,
+payment_method,
+isStatus
+isArhive
+
+
+
+
+--> Messages <--
+id (Primary Key)
+conversation_id (FOREIGN KEY)
+sender_id,
+recipient_id,
+message,
+is_read,
+date_send,
+date_read,
+
+
+
+
+
+// #SERVICE REQUEST STATUS SAMPLE
+
+
+--> Notifications <--
+https://isomorphic-furyroad.vercel.app/logistics
+
+//  Step 1
+Pending Pickup – The customer has placed a service request, but the clothes have not been picked up yet.
+Ongoing Pickup – The delivery staff has picked up the clothes from the customer's location.
+Completed Pickup – The delivery staff has picked up the clothes from the customer's location.
+
+
+//  Step 2
+At Store – The clothes have been dropped off at the laundry store.
+In Queue – The clothes are waiting for an available laundry unit.
+In Laundry – The clothes have been assigned to a laundry unit and are currently being washed/dried.
+Laundry Completed – The clothes have finished the washing/drying process.
+
+
+//  Step 3
+Ready for Delivery – The clothes are ready to be delivered back to the customer.
+Out for Delivery – The delivery staff is on the way to deliver the clothes to the customer.
+Completed Delivery – The clothes have been delivered to the customer, and payment has been confirmed.
+Canceled - its cancel the service request of the customer
+
+For the situation where a delivery rider attempts to deliver clothes to a customer, but the customer is not home and the rider returns the clothes to the store, you can use the following status options:
+
+Suggested Statuses:
+"Attempted Delivery": This status indicates that the delivery was attempted, but it was not completed because the customer was unavailable.
+"Returned to Store": This status would indicate that the delivery was unsuccessful, and the clothes were brought back to the store. It clearly describes the outcome of the failed delivery.
+"Failed Delivery": This status could be used to indicate that the delivery could not be completed due to the customer not being available, and the rider returned the clothes to the store.
+Example:
+Request Status: "Attempted Delivery"
+Notes: The rider attempted the delivery, but the customer was not home, so the clothes were returned to the store.
+You can also use a combination of statuses:
+
+Delivery Status: "Attempted"
+Return Status: "Returned to Store" or "Failed Delivery"
+This helps provide a clear view of the delivery attempt and its outcome, and it allows tracking of failed deliveries for follow-up or reattempting.
+
+
+

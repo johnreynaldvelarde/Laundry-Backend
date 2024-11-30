@@ -1,0 +1,69 @@
+
+  const handleRefreshData = () => {
+    fetchActivityLogData();
+  };
+refreshData
+Administrator
+ const { userDetails } = useAuth();
+const { activity_id, activity_username, activity_roleName } = req.body;
+
+import { ActionDescriptions, ActionTypes } from "../../helpers/activityLog.js";
+import { logActivity } from "../useExtraSystem.js";
+
+activity_id: userDetails.userId,
+activity_username: userDetails.username,
+activity_roleName: userDetails.roleName,
+
+activity_id, activity_username, activity_roleName,
+
+
+  const actionType = ActionTypes.USER_MANAGEMENT;
+    const actionDescription = ActionDescriptions[actionType].ADD_USER(
+      activity_username,
+      username
+    );
+
+    await logActivity(
+      connection,
+      activity_id,
+      activity_roleName,
+      actionType,
+      actionDescription
+    );
+
+
+    const activityData = {
+        activity_id: userDetails.userId,
+        activity_username: userDetails.username,
+        activity_roleName: userDetails.roleName,
+      }
+      
+      const {
+    activity_id,
+    activity_username,
+    activity_roleName,
+  } = req.body;;
+
+
+
+
+
+  PERMISSION
+  disabled={!userDetails?.permissions?.canRead}
+  disabled={!userDetails?.permissions?.canWrite}
+  disabled={!userDetails?.permissions?.canEdit}
+  disabled={!userDetails?.permissions?.canDelete}
+
+   useEffect(() => {
+    if (getData) {
+      setItemName(getData.item_name || "");
+      setItemPrice(getData.price || "");
+      setSelectedCategory(getData.category_id);
+      setSelectedStatus(getData.isStatus);
+    } else {
+      setItemName("");
+      setItemPrice("");
+      setSelectedCategory("");
+      setSelectedStatus("");
+    }
+  }, [getData]);
