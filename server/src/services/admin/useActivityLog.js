@@ -40,10 +40,10 @@ export const handleGetActivityLogStats = async (req, res, db) => {
 
     const [rows] = await db.execute(`
       SELECT 
-        DAYOFWEEK(timestamp) AS day_of_week,   -- Get day of the week (1 = Sunday, 2 = Monday, ..., 7 = Saturday)
-        HOUR(timestamp) AS hour_of_day,        -- Get hour of the day (0-23)
+        DAYOFWEEK(timestamp) AS day_of_week,  
+        HOUR(timestamp) AS hour_of_day,       
         COUNT(*) AS activity_count
-      FROM activity_log
+      FROM Activity_Log
       GROUP BY day_of_week, hour_of_day
       ORDER BY day_of_week, hour_of_day;
     `);
