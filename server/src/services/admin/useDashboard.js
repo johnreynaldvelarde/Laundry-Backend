@@ -468,7 +468,7 @@ export const handleAdminGetRevenueByMonth = async (req, res, db) => {
         SUM(total_amount) AS revenue
       FROM Transactions
       WHERE status = 'Completed'
-      GROUP BY MONTH(created_at)
+      GROUP BY MONTH(created_at), MONTHNAME(created_at)
       ORDER BY MONTH(created_at)
     `;
 
