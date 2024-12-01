@@ -121,7 +121,6 @@ router.get(
 
 export default router;
 
-// Forget Password and Email is Exist
 router.post(
   "/is-email-exist",
   withDatabaseConnection(async (req, res, connection) => {
