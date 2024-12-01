@@ -9,7 +9,7 @@ const setupSocketIO = (server) => {
       origin:
         process.env.NODE_ENV === "production"
           ? "https://lizaso-laundry-hub.vercel.app"
-          : process.env.DEVELOPMENT_FRONTEND_URL,
+          : "https://lizaso-laundry-hub.vercel.app",
       methods: ["GET", "POST"],
       allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
