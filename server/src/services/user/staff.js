@@ -1,4 +1,4 @@
-import { io } from "../../socket/socket.js";
+import { io, userSockets } from "../../socket/socket.js";
 import { haversineDistance } from "../../helpers/distanceComputing.js";
 import { logNotification } from "../useExtraSystem.js";
 import {
@@ -187,7 +187,7 @@ export const handleGetNotificationStaff = async (req, res, connection) => {
         n.created_at,
         n.read_at
       FROM Notifications n
-      WHERE n.store_id = ?
+      WHERE n.store_id = ? AND n.status = 'Unread'
       ORDER BY n.created_at DESC
     `;
 
@@ -370,12 +370,21 @@ export const handleUpdateServiceRequestCancel = async (
       notificationDescription
     );
 
-    io.emit("sendNotificationToUser", {
-      userId: customer_id,
-      message: "Your service request has been canceled.",
-    });
-
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -405,6 +414,21 @@ export const handleUpdateServiceRequestOngoing = async (
   try {
     await connection.beginTransaction();
 
+    const getCustomerIdQuery = `
+      SELECT customer_id 
+      FROM Service_Request 
+      WHERE id = ?
+    `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id } = customerRows[0];
+
     const updateQuery = `
       UPDATE Service_Request
       SET request_status = 'Ongoing Pickup', user_id = ?
@@ -420,7 +444,49 @@ export const handleUpdateServiceRequestOngoing = async (
 
     await connection.execute(updateProgressQuery, [id]);
 
+    // GET ASSIGN PICKUP STAFF
+    const getFullNameQuery = `
+      SELECT CONCAT(first_name, ' ', COALESCE(middle_name, ''), ' ', last_name) AS full_name
+      FROM User_Account
+      WHERE id = ?
+    `;
+    const [userRows] = await connection.execute(getFullNameQuery, [user_id]);
+
+    if (userRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    const { full_name } = userRows[0];
+
+    const notificationType = NotificationStatus.ONGOING_PICKUP;
+    const notificationDescription =
+      NotificationDescriptions[notificationType](full_name);
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -449,6 +515,22 @@ export const handleUpdateServiceRequestBackToPending = async (
   try {
     await connection.beginTransaction();
 
+    const getCustomerIdQuery = `
+      SELECT customer_id 
+      FROM Service_Request 
+      WHERE id = ?
+    `;
+
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id } = customerRows[0];
+
     const updateQuery = `
           UPDATE Service_Request
           SET request_status = 'Pending Pickup', user_id = NULL
@@ -464,7 +546,49 @@ export const handleUpdateServiceRequestBackToPending = async (
 
     await connection.execute(updateProgressQuery, [id]);
 
+    // GET ASSIGN PICKUP STAFF
+    const getFullNameQuery = `
+      SELECT CONCAT(first_name, ' ', COALESCE(middle_name, ''), ' ', last_name) AS full_name
+      FROM User_Account
+      WHERE id = ?
+    `;
+    const [userRows] = await connection.execute(getFullNameQuery, [user_id]);
+
+    if (userRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    const { full_name } = userRows[0];
+
+    const notificationType = NotificationStatus.RETURN_TO_PENDING;
+    const notificationDescription =
+      NotificationDescriptions[notificationType](full_name);
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -493,6 +617,21 @@ export const handleUpdateServiceRequestFinishPickup = async (
   try {
     await connection.beginTransaction();
 
+    const getCustomerIdQuery = `
+      SELECT customer_id 
+      FROM Service_Request 
+      WHERE id = ?
+    `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id } = customerRows[0];
+
     const updateQuery = `
           UPDATE Service_Request
           SET request_status = 'Completed Pickup',
@@ -510,7 +649,33 @@ export const handleUpdateServiceRequestFinishPickup = async (
 
     await connection.execute(updateProgressQuery, [id]);
 
+    const notificationType = NotificationStatus.COMPLETED_PICKUP;
+    const notificationDescription =
+      NotificationDescriptions[notificationType]();
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -538,6 +703,40 @@ export const handleUpdateServiceRequestReadyDeliveryToOngoing = async (
   try {
     await connection.beginTransaction();
 
+    const getCustomerIdQuery = `
+      SELECT customer_id, user_id 
+      FROM Service_Request 
+      WHERE id = ?
+    `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(200)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id, user_id } = customerRows[0];
+
+    const getUserFullNameQuery = `
+      SELECT 
+        CONCAT(first_name, ' ', IFNULL(middle_name, ''), ' ', last_name) AS fullname 
+      FROM User_Account 
+      WHERE id = ?
+    `;
+
+    const [userRows] = await connection.execute(getUserFullNameQuery, [
+      user_id,
+    ]);
+
+    const userFullName = userRows.length > 0 ? userRows[0].fullname : null;
+
+    if (!userFullName) {
+      return res
+        .status(200)
+        .json({ success: false, message: "User not found." });
+    }
+
     const updateQuery = `
       UPDATE Service_Request
       SET request_status = 'Out for Delivery'
@@ -553,7 +752,33 @@ export const handleUpdateServiceRequestReadyDeliveryToOngoing = async (
 
     await connection.execute(updateProgressQuery, [id]);
 
+    const notificationType = NotificationStatus.OUT_FOR_DELIVERY_CUSTOMER;
+    const notificationDescription =
+      NotificationDescriptions[notificationType](userFullName);
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -580,6 +805,40 @@ export const handleUpdateServiceRequestFinishTheDelivery = async (
 
   try {
     await connection.beginTransaction();
+
+    const getCustomerIdQuery = `
+    SELECT customer_id, user_id 
+    FROM Service_Request 
+    WHERE id = ?
+  `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(200)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id, user_id } = customerRows[0];
+
+    const getUserFullNameQuery = `
+    SELECT 
+      CONCAT(first_name, ' ', IFNULL(middle_name, ''), ' ', last_name) AS fullname 
+    FROM User_Account 
+    WHERE id = ?
+  `;
+
+    const [userRows] = await connection.execute(getUserFullNameQuery, [
+      user_id,
+    ]);
+
+    const userFullName = userRows.length > 0 ? userRows[0].fullname : null;
+
+    if (!userFullName) {
+      return res
+        .status(200)
+        .json({ success: false, message: "User not found." });
+    }
 
     const updateQuery = `
       UPDATE Service_Request
@@ -623,7 +882,33 @@ export const handleUpdateServiceRequestFinishTheDelivery = async (
 
     await connection.execute(updateTransactionQuery, [assignmentId]);
 
+    const notificationType = NotificationStatus.COMPLETED_DELIVERY_CUSTOMER;
+    const notificationDescription =
+      NotificationDescriptions[notificationType](userFullName);
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -651,12 +936,24 @@ export const handleUpdateServiceRequestUsingQrCode = async (
   const { id } = req.params;
   const { code, user_id } = req.body;
 
-  console.log(user_id);
-
   try {
     await connection.beginTransaction();
 
-    // Step 1: Check if the tracking code exists in the Service_Request table
+    const getCustomerIdQuery = `
+      SELECT customer_id 
+      FROM Service_Request 
+      WHERE id = ?
+    `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id } = customerRows[0];
+
     const [existingRequest] = await connection.execute(
       `SELECT request_status, isPickup, isDelivery FROM Service_Request WHERE id = ? AND tracking_code = ?`,
       [id, code]
@@ -746,8 +1043,56 @@ export const handleUpdateServiceRequestUsingQrCode = async (
       });
     }
 
-    // Step 4: Commit the transaction if everything is fine
+    const getFullNameQuery = `
+      SELECT CONCAT(first_name, ' ', COALESCE(middle_name, ''), ' ', last_name) AS full_name
+      FROM User_Account
+      WHERE id = ?
+    `;
+    const [userRows] = await connection.execute(getFullNameQuery, [user_id]);
+
+    if (userRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    const { full_name } = userRows[0];
+
+    // Log notification for completed pickup
+    let notificationType = NotificationStatus.COMPLETED_PICKUP;
+    let notificationDescription = NotificationDescriptions[notificationType]();
+
+    // Log notification for completed delivery to customer
+    if (isDelivery) {
+      notificationType = NotificationStatus.COMPLETED_DELIVERY_CUSTOMER;
+      notificationDescription =
+        NotificationDescriptions[notificationType](full_name);
+    }
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: "Service request updated successfully.",
@@ -760,3 +1105,271 @@ export const handleUpdateServiceRequestUsingQrCode = async (
     if (connection) connection.release();
   }
 };
+
+export const handleUpdateClearAllNotificationsByStaff = async (
+  req,
+  res,
+  connection
+) => {
+  const { id } = req.params; // store id
+
+  try {
+    await connection.beginTransaction();
+
+    const updateQuery = `
+      UPDATE Notifications
+      SET status = 'Read', read_at = NOW()
+      WHERE user_id = ? AND status != 'Archived';
+    `;
+
+    const [rows] = await connection.execute(updateQuery, [id]);
+
+    await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (userSocket.userId === storeId && userSocket.userType == "Customer") {
+        io.to(userSocket.socketId).emit("notificationsModule", {});
+      }
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "All notifications marked as read" });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Database operation error:", error);
+    res.status(500).json({ error: "Error updating notifications" });
+  } finally {
+    connection.release();
+  }
+};
+
+// export const handleUpdateClearOneByOneNotificationsByStaff = async (
+//   req,
+//   res,
+//   connection,
+//   io,
+//   userSockets
+// ) => {
+//   const { id } = req.params;
+//   const { store_id } = req.body;
+
+//   try {
+//     await connection.beginTransaction();
+
+//     const updateQuery = `
+//       UPDATE Notifications
+//       SET status = 'Read', read_at = NOW()
+//       WHERE id = ? AND status != 'Archived';
+//     `;
+
+//     const [result] = await connection.execute(updateQuery, [id]);
+
+//     if (result.affectedRows === 0) {
+//       await connection.rollback();
+//       return res
+//         .status(404)
+//         .json({ error: "Notification not found or already updated." });
+//     }
+
+//     await connection.commit();
+
+//     for (const userId in userSockets) {
+//       const userSocket = userSockets[userId];
+
+//       if (
+//         userSocket.storeId === store_id &&
+//         userSocket.userType !== "Customer"
+//       ) {
+//         io.to(userSocket.socketId).emit("notificationsModule", {
+//           notificationId: id,
+//           status: "Read",
+//         });
+//       }
+//     }
+
+//     res
+//       .status(200)
+//       .json({ success: true, message: "Notification marked as read." });
+//   } catch (error) {
+//     await connection.rollback();
+//     console.error("Database operation error:", error);
+//     res.status(500).json({ error: "Error updating notification." });
+//   } finally {
+//     connection.release();
+//   }
+// };
+
+// export const handleUpdateServiceRequestUsingQrCode = async (
+//   req,
+//   res,
+//   connection
+// ) => {
+//   const { id } = req.params;
+//   const { code, user_id } = req.body;
+
+//   try {
+//     await connection.beginTransaction();
+
+//     const getCustomerIdQuery = `
+//       SELECT customer_id
+//       FROM Service_Request
+//       WHERE id = ?
+//     `;
+//     const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+//     if (customerRows.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Request not found." });
+//     }
+
+//     const { customer_id } = customerRows[0];
+
+//     const [existingRequest] = await connection.execute(
+//       `SELECT request_status, isPickup, isDelivery FROM Service_Request WHERE id = ? AND tracking_code = ?`,
+//       [id, code]
+//     );
+
+//     if (existingRequest.length === 0) {
+//       return res
+//         .status(200)
+//         .json({ success: false, message: "Service request not found." });
+//     }
+
+//     const { request_status, isPickup, isDelivery } = existingRequest[0];
+
+//     // Step 2: Check the request_status to determine availability
+//     if (
+//       request_status === "Canceled" ||
+//       request_status === "Completed Delivery"
+//     ) {
+//       return res.status(200).json({
+//         success: false,
+//         message: "This service request is not available anymore.",
+//       });
+//     }
+
+//     // Step 3: Check if isPickup is false and update the status to "Completed Pickup"
+//     if (
+//       !isPickup &&
+//       (request_status === "Pending Pickup" ||
+//         request_status === "Ongoing Pickup")
+//     ) {
+//       await connection.execute(
+//         `UPDATE Service_Request SET user_id = ?, request_status = ?,  pickup_date = NOW(), isPickup = ? WHERE id = ?`,
+//         [user_id, "Completed Pickup", true, id]
+//       );
+
+//       await connection.execute(
+//         `UPDATE Service_Progress
+//          SET completed = true,
+//              status_date = NOW()
+//          WHERE service_request_id = ? AND (stage = 'Ongoing Pickup' OR stage = 'Completed Pickup')`,
+//         [id]
+//       );
+//     }
+//     // New Step: If isPickup is true and request_status is "Completed Pickup"
+//     else if (
+//       isPickup && // Only check if pickup is completed
+//       (request_status === "Ready for Delivery" ||
+//         request_status === "Out for Delivery")
+//     ) {
+//       await connection.execute(
+//         `UPDATE Service_Request SET request_status = ?,  delivery_date = NOW(), isDelivery = ? WHERE id = ?`,
+//         ["Completed Delivery", true, id]
+//       );
+
+//       await connection.execute(
+//         `UPDATE Service_Progress
+//          SET completed = true,
+//              status_date = NOW()
+//          WHERE service_request_id = ? AND (stage = 'Out for Delivery' OR stage = 'Completed Delivery')`,
+//         [id]
+//       );
+
+//       // Get the assignment_id from Laundry_Assignment for the given service_request_id
+//       const [assignmentResult] = await connection.execute(
+//         `SELECT id
+//        FROM Laundry_Assignment
+//        WHERE service_request_id = ? AND isAssignmentStatus = 1`, // Assuming '1' indicates Completed
+//         [id]
+//       );
+
+//       if (assignmentResult.length > 0) {
+//         const assignmentId = assignmentResult[0].id;
+
+//         // Update the Transactions status to "Completed" for the obtained assignment_id
+//         await connection.execute(
+//           `UPDATE Transactions
+//            SET status = 'Completed',
+//                updated_at = NOW()
+//            WHERE assignment_id = ?`,
+//           [assignmentId]
+//         );
+//       }
+//     } else {
+//       return res.status(200).json({
+//         success: false,
+//         message: "Invalid request status or pickup/delivery already completed.",
+//       });
+//     }
+
+//     const getFullNameQuery = `
+//       SELECT CONCAT(first_name, ' ', COALESCE(middle_name, ''), ' ', last_name) AS full_name
+//       FROM User_Account
+//       WHERE id = ?
+//     `;
+//     const [userRows] = await connection.execute(getFullNameQuery, [user_id]);
+
+//     if (userRows.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "User not found." });
+//     }
+
+//     const { full_name } = userRows[0];
+
+//     // Log notification
+//     const notificationType = NotificationStatus.COMPLETED_PICKUP;
+//     const notificationDescription =
+//       NotificationDescriptions[notificationType](full_name);
+
+//     await logNotification(
+//       connection,
+//       null,
+//       customer_id,
+//       notificationType,
+//       notificationDescription
+//     );
+
+//     await connection.commit();
+
+//     for (const userId in userSockets) {
+//       const userSocket = userSockets[userId];
+
+//       if (
+//         userSocket.userId === customer_id &&
+//         userSocket.userType == "Customer"
+//       ) {
+//         io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+//           title: notificationType,
+//           message: notificationDescription,
+//         });
+//       }
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Service request updated successfully.",
+//     });
+//   } catch (error) {
+//     await connection.rollback();
+//     console.error("Database operation error:", error);
+//     res.status(500).json({ message: "Error updating service request." });
+//   } finally {
+//     if (connection) connection.release();
+//   }
+// };

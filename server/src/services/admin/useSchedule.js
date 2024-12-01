@@ -1,3 +1,10 @@
+import { io, userSockets } from "../../socket/socket.js";
+import { logNotification } from "../useExtraSystem.js";
+import {
+  NotificationDescriptions,
+  NotificationStatus,
+} from "../../helpers/notificationLog.js";
+
 export const handleGetScheduleStatsByAdmin = async (req, res, connection) => {
   try {
     await connection.beginTransaction();
@@ -347,6 +354,21 @@ export const handleUpdateServiceRequestCompletedPickup = async (
   try {
     await connection.beginTransaction();
 
+    const getCustomerIdQuery = `
+      SELECT customer_id 
+      FROM Service_Request 
+      WHERE id = ?
+    `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id } = customerRows[0];
+
     const updateQuery = `
       UPDATE Service_Request
       SET request_status = 'At Store'
@@ -362,7 +384,33 @@ export const handleUpdateServiceRequestCompletedPickup = async (
 
     await connection.execute(updateProgressQuery, [id]);
 
+    const notificationType = NotificationStatus.AT_STORE;
+    const notificationDescription =
+      NotificationDescriptions[notificationType]();
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -389,6 +437,21 @@ export const handleUpdateServiceRequestAtStoreToInQueue = async (
   try {
     await connection.beginTransaction();
 
+    const getCustomerIdQuery = `
+      SELECT customer_id 
+      FROM Service_Request 
+      WHERE id = ?
+    `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [id]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id } = customerRows[0];
+
     const updateQuery = `
       UPDATE Service_Request
       SET request_status = 'In Queue'
@@ -404,7 +467,33 @@ export const handleUpdateServiceRequestAtStoreToInQueue = async (
 
     await connection.execute(updateProgressQuery, [id]);
 
+    const notificationType = NotificationStatus.IN_QUEUE;
+    const notificationDescription =
+      NotificationDescriptions[notificationType]();
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,

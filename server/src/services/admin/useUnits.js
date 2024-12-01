@@ -4,6 +4,12 @@ import {
 } from "../../helpers/generateCode.js";
 import { progress } from "../../helpers/_progress.js";
 import QRCode from "qrcode";
+import { io, userSockets } from "../../socket/socket.js";
+import { logNotification } from "../useExtraSystem.js";
+import {
+  NotificationDescriptions,
+  NotificationStatus,
+} from "../../helpers/notificationLog.js";
 const newPickupDate = new Date();
 
 //#POST
@@ -125,7 +131,50 @@ export const handleTypeOnlineTransaction = async (req, res, connection) => {
       [serviceRequestId]
     );
 
+    const getCustomerIdQuery = `
+      SELECT customer_id
+      FROM Service_Request
+      WHERE id = ?
+    `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [
+      serviceRequestId,
+    ]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id } = customerRows[0];
+
+    const notificationType = NotificationStatus.LAUNDRY_COMPLETED_CUSTOMER;
+    const notificationDescription =
+      NotificationDescriptions[notificationType]();
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -585,9 +634,25 @@ export const handleSetLaundryAssignment = async (req, res, connection) => {
   const { service_request_id, unit_id, assign_by_id, weight, supplies } =
     req.body;
 
-  console.log(req.body);
   try {
     await connection.beginTransaction();
+
+    const getCustomerIdQuery = `
+      SELECT customer_id 
+      FROM Service_Request 
+      WHERE id = ?
+  `;
+    const [customerRows] = await connection.execute(getCustomerIdQuery, [
+      service_request_id,
+    ]);
+
+    if (customerRows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    const { customer_id } = customerRows[0];
 
     const insertQuery = `
       INSERT INTO Laundry_Assignment (
@@ -666,7 +731,33 @@ export const handleSetLaundryAssignment = async (req, res, connection) => {
       [service_request_id]
     );
 
+    const notificationType = NotificationStatus.IN_LAUNDRY;
+    const notificationDescription =
+      NotificationDescriptions[notificationType]();
+
+    await logNotification(
+      connection,
+      null,
+      customer_id,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.userId === customer_id &&
+        userSocket.userType == "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModuleForCustomer", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,

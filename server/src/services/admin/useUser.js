@@ -225,9 +225,7 @@ export const handleGetRolesPermissions = async (req, res, connection) => {
 
     const role = roleResults[0];
 
-    // Check if the role_name is 'Administrator'
     if (role.role_name === "Administrator") {
-      // If Administrator, fetch all roles and count how many users are assigned to each role
       const allRolesQuery = `
         SELECT rp.id, rp.role_name, rp.can_read, rp.can_write, rp.can_edit, rp.can_delete, rp.date_created, rp.isArchive,
           (SELECT COUNT(*) FROM User_Account ua WHERE ua.role_permissions_id = rp.id AND ua.isArchive = 0) AS user_count
@@ -243,7 +241,6 @@ export const handleGetRolesPermissions = async (req, res, connection) => {
         data: allRolesResults, // Return all roles and the number of users for each role
       });
     } else {
-      // If not an Administrator, deny access to roles data
       return res.status(403).json({
         success: false,
         message: "Access denied. Only Administrators can view all roles.",
@@ -264,7 +261,6 @@ export const handleGetRolesPermissions = async (req, res, connection) => {
 // #For getting store the user count related to it
 export const handleGetStoresBasedAdmin = async (req, res, connection) => {
   const { id } = req.params; // user id
-
 
   try {
     await connection.beginTransaction();
@@ -309,8 +305,6 @@ export const handleGetStoresBasedAdmin = async (req, res, connection) => {
         FROM Stores s
         WHERE s.isArchive = 0
       `;
-
-      console.log(allStoresQuery);
 
       const [allStoresResults] = await connection.execute(allStoresQuery);
 
@@ -419,60 +413,7 @@ export const handleGetBasedUser = async (req, res, connection) => {
   }
 };
 
-// export const handleGetBasedListUser = async (req, res, connection) => {
-//   const { id } = req.params;
-//   const { userId } = req.query;
-//   try {
-//     await connection.beginTransaction();
-
-//     const checkQuery = `
-//       SELECT id FROM Stores WHERE id = ? LIMIT 1
-//     `;
-//     const [existingStore] = await connection.execute(checkQuery, [id]);
-
-//     if (existingStore.length === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Store not found.",
-//       });
-//     }
-
-//     const getQuery = `
-//       SELECT
-//         id,
-//         store_id,
-//         username,
-//         email,
-//         CONCAT(first_name, ' ', COALESCE(middle_name, ''), ' ', last_name) AS full_name,
-//         user_type,
-//         isOnline,
-//         isStatus,
-//         date_created
-//       FROM User_Account
-//       WHERE store_id = ?
-//         AND user_type NOT IN ('Customer', 'Administrator')
-//         AND isArchive = 0
-//         AND id != ?;
-//     `;
-//     const [users] = await connection.execute(getQuery, [id, userId]);
-
-//     await connection.commit();
-
-//     return res.status(200).json({
-//       success: true,
-//       data: users,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching users:", error);
-//     await connection.rollback();
-//     res.status(500).json({ error: "Server error" });
-//   } finally {
-//     if (connection) connection.release();
-//   }
-// };
-
 // PUT UPDATE
-
 export const handleGetBasedListUser = async (req, res, connection) => {
   const { id } = req.params; // store_id from request
   const { userId } = req.query; // Exclude the current user ID
