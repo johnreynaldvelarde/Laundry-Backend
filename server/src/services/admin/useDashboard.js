@@ -835,44 +835,83 @@ export const handleUserGetListReadyForDelivery = async (
     await connection.beginTransaction();
 
     // SQL Query to fetch Service Requests that are ready for delivery along with the customer address
+    // const query = `
+    //     SELECT
+    //       SR.id AS service_request_id,
+    //       SR.tracking_code,
+    //       SR.customer_fullname,
+    //       SR.delivery_date,
+    //       SR.request_status,
+    //       SR.isDelivery,
+    //       LA.id AS laundry_assignment_id,
+    //       LA.assigned_at,
+    //       T.id AS transaction_id,
+    //       T.total_amount,
+    //       T.payment_method,
+    //       T.status AS transaction_status,
+    //       T.created_at AS transaction_date,
+    //       MAX(A.address_line) AS address_line,
+    //       MAX(A.country) AS country,
+    //       MAX(A.region) AS region,
+    //       MAX(A.province) AS province,
+    //       MAX(A.city) AS city,
+    //       MAX(A.postal_code) AS postal_code
+    //     FROM Service_Request SR
+    //     LEFT JOIN Laundry_Assignment LA ON LA.service_request_id = SR.id
+    //     LEFT JOIN Transactions T ON T.assignment_id = LA.id
+    //     LEFT JOIN User_Account UA ON UA.store_id = SR.store_id AND UA.user_type = 'Customer'
+    //     LEFT JOIN Addresses A ON A.id = UA.address_id
+    //     WHERE SR.store_id = ?
+    //       AND SR.request_status IN ('Ready for Delivery', 'Attempted Delivery')
+    //       AND LA.isAssignmentStatus = 1
+    //       AND (T.status = 'Completed' OR T.status = 'Pending')
+    //     GROUP BY SR.id
+    //      ORDER BY
+    //     CASE
+    //       WHEN SR.request_status = 'Attempted Delivery' THEN 1
+    //       WHEN SR.request_status = 'Ready for Delivery' THEN 2
+    //       ELSE 3
+    //     END;
+    //   `;
+
     const query = `
-        SELECT
-          SR.id AS service_request_id,
-          SR.tracking_code,
-          SR.customer_fullname,
-          SR.delivery_date,
-          SR.request_status,
-          SR.isDelivery,
-          LA.id AS laundry_assignment_id,
-          LA.assigned_at,
-          T.id AS transaction_id,
-          T.total_amount,
-          T.payment_method,
-          T.status AS transaction_status,
-          T.created_at AS transaction_date,
-          MAX(A.address_line) AS address_line,
-          MAX(A.country) AS country,
-          MAX(A.region) AS region,
-          MAX(A.province) AS province,
-          MAX(A.city) AS city,
-          MAX(A.postal_code) AS postal_code
-        FROM Service_Request SR
-        LEFT JOIN Laundry_Assignment LA ON LA.service_request_id = SR.id
-        LEFT JOIN Transactions T ON T.assignment_id = LA.id
-        LEFT JOIN User_Account UA ON UA.store_id = SR.store_id AND UA.user_type = 'Customer'
-        LEFT JOIN Addresses A ON A.id = UA.address_id
-        WHERE SR.store_id = ?
-          AND SR.request_status IN ('Ready for Delivery', 'Attempted Delivery')
-          AND LA.isAssignmentStatus = 1
-          AND (T.status = 'Completed' OR T.status = 'Pending')
-        GROUP BY SR.id
-         ORDER BY 
+      SELECT
+        SR.id AS service_request_id,
+        MAX(SR.tracking_code) AS tracking_code,
+        MAX(SR.customer_fullname) AS customer_fullname,
+        MAX(SR.delivery_date) AS delivery_date,
+        MAX(SR.request_status) AS request_status,
+        MAX(SR.isDelivery) AS isDelivery,
+        MAX(LA.id) AS laundry_assignment_id,
+        MAX(LA.assigned_at) AS assigned_at,
+        MAX(T.id) AS transaction_id,
+        MAX(T.total_amount) AS total_amount,
+        MAX(T.payment_method) AS payment_method,
+        MAX(T.status) AS transaction_status,
+        MAX(T.created_at) AS transaction_date,
+        MAX(A.address_line) AS address_line,
+        MAX(A.country) AS country,
+        MAX(A.region) AS region,
+        MAX(A.province) AS province,
+        MAX(A.city) AS city,
+        MAX(A.postal_code) AS postal_code
+      FROM Service_Request SR
+      LEFT JOIN Laundry_Assignment LA ON LA.service_request_id = SR.id
+      LEFT JOIN Transactions T ON T.assignment_id = LA.id
+      LEFT JOIN User_Account UA ON UA.store_id = SR.store_id AND UA.user_type = 'Customer'
+      LEFT JOIN Addresses A ON A.id = UA.address_id
+      WHERE SR.store_id = ?
+        AND SR.request_status IN ('Ready for Delivery', 'Attempted Delivery')
+        AND LA.isAssignmentStatus = 1
+        AND (T.status = 'Completed' OR T.status = 'Pending')
+      GROUP BY SR.id
+      ORDER BY 
         CASE 
-          WHEN SR.request_status = 'Attempted Delivery' THEN 1
-          WHEN SR.request_status = 'Ready for Delivery' THEN 2
+          WHEN MAX(SR.request_status) = 'Attempted Delivery' THEN 1
+          WHEN MAX(SR.request_status) = 'Ready for Delivery' THEN 2
           ELSE 3
         END;
-      `;
+    `;
 
     const [readyForDeliveryRows] = await connection.execute(query, [id]);
 
