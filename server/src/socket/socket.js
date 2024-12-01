@@ -8,7 +8,7 @@ const setupSocketIO = (server) => {
     cors: {
       origin:
         process.env.NODE_ENV === "production"
-          ? process.env.PRODUCTION_FRONTEND_URL
+          ? "https://lizaso-laundry-hub.vercel.app"
           : process.env.DEVELOPMENT_FRONTEND_URL,
       methods: ["GET", "POST"],
       allowedHeaders: ["Content-Type", "Authorization"],
