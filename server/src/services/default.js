@@ -12,87 +12,6 @@ export const getMainStoreId = async (db) => {
   }
 };
 
-export const ensureMainStoreExists = async (db) => {
-  try {
-    await db.beginTransaction();
-
-    const [[{ count }]] = await db.execute(
-      "SELECT COUNT(*) AS count FROM Stores WHERE is_main_store = TRUE"
-    );
-
-    if (count === 0) {
-      const storeNo = "LIZASO-" + new Date().getTime(); // Unique store ID starting with LIZASO
-
-      // Step 1: Insert the address into the Addresses table
-      const insertAddressQuery = `
-        INSERT INTO Addresses (address_line, country, region, province, city, postal_code, latitude, longitude, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`;
-
-      const addressValues = [
-        "Balagtas, Bulacan", // address_line
-        "Philippines", // country
-        "Region III - Central Luzon", // region
-        "Bulacan", // province
-        "Balagtas", // city
-        "3016", // postal_code
-        "14.814820876765298", // latitude
-        "120.91126972957287", // longitude
-      ];
-
-      const [addressResult] = await db.execute(
-        insertAddressQuery,
-        addressValues
-      );
-      const addressId = addressResult.insertId;
-
-      // Step 2: Insert the store into the Stores table using the address_id
-      const insertStoreQuery = `
-        INSERT INTO Stores 
-        (address_id, store_no, store_name, store_contact, store_email, is_main_store, updated_at, date_created, isStatus, isArchive) 
-        VALUES (?, ?, 'Lizaso Laundry Hub', '09310064466', 'lizasolaundryhub@gmail.com', TRUE, NOW(), NOW(), TRUE, FALSE)`;
-
-      const storeValues = [addressId, storeNo];
-      const [storeResult] = await db.execute(insertStoreQuery, storeValues);
-      const storeId = storeResult.insertId;
-
-      console.log("Main store created.");
-
-      // Step 3: Check if service types already exist for this store
-      const [existingServiceTypes] = await db.execute(
-        "SELECT COUNT(*) AS count FROM Service_Type WHERE store_id = ?",
-        [storeId]
-      );
-
-      // console.log("STORE ID: " + storeId);
-
-      // console.log(existingServiceTypes);
-
-      if (existingServiceTypes[0].count === 0) {
-        // Step 4: Insert default service types for the newly created store
-        const insertServiceQuery = `
-          INSERT INTO Service_Type (store_id, service_name, default_price, date_created, isArchive)
-          VALUES (?, 'Wash', 65, NOW(), FALSE),
-                 (?, 'Dry', 60, NOW(), FALSE),
-                 (?, 'Fold', 30, NOW(), FALSE),
-                 (?, 'Wash/Dry', 125, NOW(), FALSE),
-                 (?, 'Wash/Dry/Fold', 155, NOW(), FALSE)`;
-
-        const serviceValues = [storeId, storeId, storeId, storeId, storeId];
-
-        await db.execute(insertServiceQuery, serviceValues);
-        console.log("Default service types added.");
-      } else {
-        console.log("Service types already exist for this store.");
-      }
-
-      await db.commit();
-    }
-  } catch (err) {
-    await db.rollback();
-    throw new Error(`Error ensuring main store exists: ${err.message}`);
-  }
-};
-
 // export const ensureMainStoreExists = async (db) => {
 //   try {
 //     await db.beginTransaction();
@@ -129,8 +48,8 @@ export const ensureMainStoreExists = async (db) => {
 //       // Step 2: Insert the store into the Stores table using the address_id
 //       const insertStoreQuery = `
 //         INSERT INTO Stores
-//         (address_id, store_no, store_name, store_contact, store_email, is_main_store, updated_at, date_created, isStatus)
-//         VALUES (?, ?, 'Lizaso Laundry Hub', '09310064466', 'lizasolaundryhub@gmail.com', TRUE, NOW(), NOW(), TRUE)`;
+//         (address_id, store_no, store_name, store_contact, store_email, is_main_store, updated_at, date_created, isStatus, isArchive)
+//         VALUES (?, ?, 'Lizaso Laundry Hub', '09310064466', 'lizasolaundryhub@gmail.com', TRUE, NOW(), NOW(), TRUE, FALSE)`;
 
 //       const storeValues = [addressId, storeNo];
 //       const [storeResult] = await db.execute(insertStoreQuery, storeValues);
@@ -138,18 +57,33 @@ export const ensureMainStoreExists = async (db) => {
 
 //       console.log("Main store created.");
 
-//       // Step 3: Insert default service types for the newly created store
-//       const insertServiceQuery = `
-//         INSERT INTO Service_Type (store_id, service_name, default_price, date_created, isArchive)
-//         VALUES (?, 'Wash', 65, NOW(), FALSE),
-//               (?, 'Dry', 60, NOW(), FALSE),
-//               (?, 'Fold', 30, NOW(), FALSE),
-//               (?, 'Wash/Dry', 125, NOW(), FALSE),
-//               (?, 'Wash/Dry/Fold', 155, NOW(), FALSE)`;
+//       // Step 3: Check if service types already exist for this store
+//       const [existingServiceTypes] = await db.execute(
+//         "SELECT COUNT(*) AS count FROM Service_Type WHERE store_id = ?",
+//         [storeId]
+//       );
 
-//       const serviceValues = [storeId, storeId, storeId, storeId, storeId];
+//       // console.log("STORE ID: " + storeId);
 
-//       await db.execute(insertServiceQuery, serviceValues);
+//       // console.log(existingServiceTypes);
+
+//       if (existingServiceTypes[0].count === 0) {
+//         // Step 4: Insert default service types for the newly created store
+//         const insertServiceQuery = `
+//           INSERT INTO Service_Type (store_id, service_name, default_price, date_created, isArchive)
+//           VALUES (?, 'Wash', 65, NOW(), FALSE),
+//                  (?, 'Dry', 60, NOW(), FALSE),
+//                  (?, 'Fold', 30, NOW(), FALSE),
+//                  (?, 'Wash/Dry', 125, NOW(), FALSE),
+//                  (?, 'Wash/Dry/Fold', 155, NOW(), FALSE)`;
+
+//         const serviceValues = [storeId, storeId, storeId, storeId, storeId];
+
+//         await db.execute(insertServiceQuery, serviceValues);
+//         console.log("Default service types added.");
+//       } else {
+//         console.log("Service types already exist for this store.");
+//       }
 
 //       await db.commit();
 //     }
@@ -158,6 +92,72 @@ export const ensureMainStoreExists = async (db) => {
 //     throw new Error(`Error ensuring main store exists: ${err.message}`);
 //   }
 // };
+
+export const ensureMainStoreExists = async (db) => {
+  try {
+    await db.beginTransaction();
+
+    const [[{ count }]] = await db.execute(
+      "SELECT COUNT(*) AS count FROM Stores WHERE is_main_store = TRUE"
+    );
+
+    if (count === 0) {
+      const storeNo = "LIZASO-" + new Date().getTime(); // Unique store ID starting with LIZASO
+
+      // Step 1: Insert the address into the Addresses table
+      const insertAddressQuery = `
+        INSERT INTO Addresses (address_line, country, region, province, city, postal_code, latitude, longitude, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`;
+
+      const addressValues = [
+        "Balagtas, Bulacan", // address_line
+        "Philippines", // country
+        "Region III - Central Luzon", // region
+        "Bulacan", // province
+        "Balagtas", // city
+        "3016", // postal_code
+        "14.814820876765298", // latitude
+        "120.91126972957287", // longitude
+      ];
+
+      const [addressResult] = await db.execute(
+        insertAddressQuery,
+        addressValues
+      );
+      const addressId = addressResult.insertId;
+
+      // Step 2: Insert the store into the Stores table using the address_id
+      const insertStoreQuery = `
+        INSERT INTO Stores
+        (address_id, store_no, store_name, store_contact, store_email, is_main_store, updated_at, date_created, isStatus)
+        VALUES (?, ?, 'Lizaso Laundry Hub', '09310064466', 'lizasolaundryhub@gmail.com', TRUE, NOW(), NOW(), TRUE)`;
+
+      const storeValues = [addressId, storeNo];
+      const [storeResult] = await db.execute(insertStoreQuery, storeValues);
+      const storeId = storeResult.insertId;
+
+      console.log("Main store created.");
+
+      // Step 3: Insert default service types for the newly created store
+      const insertServiceQuery = `
+        INSERT INTO Service_Type (store_id, service_name, default_price, date_created, isArchive)
+        VALUES (?, 'Wash', 65, NOW(), FALSE),
+              (?, 'Dry', 60, NOW(), FALSE),
+              (?, 'Fold', 30, NOW(), FALSE),
+              (?, 'Wash/Dry', 125, NOW(), FALSE),
+              (?, 'Wash/Dry/Fold', 155, NOW(), FALSE)`;
+
+      const serviceValues = [storeId, storeId, storeId, storeId, storeId];
+
+      await db.execute(insertServiceQuery, serviceValues);
+
+      await db.commit();
+    }
+  } catch (err) {
+    await db.rollback();
+    throw new Error(`Error ensuring main store exists: ${err.message}`);
+  }
+};
 
 export const createDefaultAdmin = async (db) => {
   try {
