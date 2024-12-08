@@ -35,8 +35,10 @@ export const handleLogin = async (req, res, db) => {
       [username]
     );
 
-    
-    if (userAccountResults.length === 0 || userAccountResults[0].isStatus === 0 ) {
+    if (
+      userAccountResults.length === 0 ||
+      userAccountResults[0].isStatus === 0
+    ) {
       await db.rollback();
       return res.status(404).json({
         success: false,
@@ -44,7 +46,7 @@ export const handleLogin = async (req, res, db) => {
       });
     }
 
-    if (userAccountResults[0].user_type === 'Delivery Staff') {
+    if (userAccountResults[0].user_type === "Delivery Staff") {
       await db.rollback();
       return res.status(404).json({
         success: false,
@@ -316,6 +318,7 @@ export const getUserDetails = async (req, res, db) => {
       const response = {
         success: true,
         user: {
+          avatarLink: user.avatar_link,
           userId: user.id,
           storeId: user.store_id,
           addressId: user.address_id,

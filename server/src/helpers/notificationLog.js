@@ -13,6 +13,7 @@ export const NotificationStatus = {
   CANCELED: "Canceled",
 
   // For Staff
+  CANCELED_TO_STAFF: "Canceled By Customer",
   PENDING_PICKUP_SENT_TO_STAFF: "Request By Customer",
   READY_FOR_DELIVERY_STAFF: "Delivery Ready for Staff",
   OUT_FOR_DELIVERY_STAFF: "Staff Delivering",
@@ -58,6 +59,9 @@ export const NotificationDescriptions = {
     `Your service request have been canceled.`,
 
   // FOR STAFF TO SEE
+  [NotificationStatus.CANCELED_TO_STAFF]: (customerName, serviceName) =>
+    `${customerName} has canceled their ${serviceName} service request.`,
+
   [NotificationStatus.PENDING_PICKUP_SENT_TO_STAFF]: (userName, serviceType) =>
     `A ${serviceType} service has been requested by ${userName}, but the clothes are still awaiting pickup.`,
 

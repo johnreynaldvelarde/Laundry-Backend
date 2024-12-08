@@ -5,17 +5,17 @@ export const handleGetNotificationUser = async (req, res, connection) => {
 
     const query = `
         SELECT 
-          n.id,
-          n.store_id,
-          n.user_id,
-          n.notification_type,
-          n.notification_description,
-          n.status,
-          n.created_at,
-          n.read_at
-        FROM Notifications n
-        WHERE n.store_id = ?
-        ORDER BY n.created_at DESC
+        n.id,
+        n.store_id,
+        n.user_id,
+        n.notification_type,
+        n.notification_description,
+        n.status,
+        n.created_at,
+        n.read_at
+      FROM Notifications n
+      WHERE n.store_id = ? AND n.status = 'Unread'
+      ORDER BY n.created_at DESC
       `;
 
     const [rows] = await connection.execute(query, [id]);

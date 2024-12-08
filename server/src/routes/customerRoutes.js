@@ -14,6 +14,7 @@ import {
   handleUpdateCustomerAddress,
   handleUpdateCustomerBasicInformationWeb,
   handleUpdateCustomerProfile,
+  handleUpdateDeleteProfileImage,
   handleUpdateNotificationCustomerClearAll,
   handleUpdateResetPassword,
   handleUpdateServiceRequestCancelByCustomer,
@@ -259,6 +260,17 @@ router.put(
   withDatabaseConnection(async (req, res, connection) => {
     try {
       await handleUpdateServiceRequestCancelByCustomer(req, res, connection);
+    } catch (error) {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  })
+);
+
+router.put(
+  "/customers/:id/delete-profile-picture",
+  withDatabaseConnection(async (req, res, connection) => {
+    try {
+      await handleUpdateDeleteProfileImage(req, res, connection);
     } catch (error) {
       res.status(500).json({ error: "Internal Server Error" });
     }

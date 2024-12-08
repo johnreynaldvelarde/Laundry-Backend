@@ -1,3 +1,4 @@
+import cloudinary from "cloudinary";
 import { io, userSockets } from "../../socket/socket.js";
 import QRCode from "qrcode";
 import { generateTrackingCode } from "../../helpers/generateCode.js";
@@ -12,6 +13,12 @@ import {
   NotificationDescriptions,
   NotificationStatus,
 } from "../../helpers/notificationLog.js";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // #POST
 export const handleSetCustomerServiceRequest = async (req, res, connection) => {
@@ -1137,7 +1144,7 @@ export const handleGetNotificationCustomer = async (req, res, connection) => {
 };
 
 //#PUT
-// NOTIFCATION CLEAR ALL
+// NOTIFICATION CLEAR ALL
 export const handleUpdateNotificationCustomerClearAll = async (
   req,
   res,
@@ -1327,8 +1334,15 @@ export const handleUpdateCustomerBasicInformationMobile = async (
 
 export const handleUpdateCustomerProfile = async (req, res, connection) => {
   const { id } = req.params;
-  const { mobile_number, email, username, firstname, middlename, lastname } =
-    req.body;
+  const {
+    mobile_number,
+    email,
+    username,
+    firstname,
+    middlename,
+    lastname,
+    avatar_link,
+  } = req.body;
 
   try {
     await connection.beginTransaction();
@@ -1354,7 +1368,8 @@ export const handleUpdateCustomerProfile = async (req, res, connection) => {
         username = ?,
         first_name = ?,
         middle_name = ?,
-        last_name = ?
+        last_name = ?,
+        avatar_link = ?
       WHERE id = ?;  
     `;
 
@@ -1365,6 +1380,7 @@ export const handleUpdateCustomerProfile = async (req, res, connection) => {
       firstname,
       middlename,
       lastname,
+      avatar_link,
       id,
     ]);
 
@@ -1383,7 +1399,7 @@ export const handleUpdateCustomerProfile = async (req, res, connection) => {
 };
 
 export const handleUpdateCustomerAddress = async (req, res, connection) => {
-  const { id } = req.params; // address id (Primary Key for the address)
+  const { id } = req.params;
   const {
     address_line,
     country,
@@ -1570,6 +1586,7 @@ export const handleUpdateChangeStore = async (req, res, connection) => {
   }
 };
 
+// Cancel Service Request By Customer
 export const handleUpdateServiceRequestCancelByCustomer = async (
   req,
   res,
@@ -1579,6 +1596,27 @@ export const handleUpdateServiceRequestCancelByCustomer = async (
 
   try {
     await connection.beginTransaction();
+
+    const selectQuery = `
+      SELECT 
+        sr.store_id, 
+        sr.customer_fullname,
+        st.service_name
+      FROM Service_Request sr
+      JOIN Service_Type st ON sr.service_type_id = st.id
+      WHERE sr.id = ?;
+    `;
+
+    const [rows] = await connection.execute(selectQuery, [id]);
+
+    if (rows.length === 0) {
+      await connection.rollback();
+      return res
+        .status(200)
+        .json({ success: false, message: "Service request not found." });
+    }
+
+    const { store_id, customer_fullname, service_name } = rows[0];
 
     const updateQuery = `
       UPDATE Service_Request
@@ -1594,7 +1632,35 @@ export const handleUpdateServiceRequestCancelByCustomer = async (
         .json({ success: false, message: "Failed to update request status." });
     }
 
+    const notificationType = NotificationStatus.CANCELED_TO_STAFF;
+    const notificationDescription = NotificationDescriptions[notificationType](
+      customer_fullname,
+      service_name
+    );
+
+    await logNotification(
+      connection,
+      store_id,
+      null,
+      notificationType,
+      notificationDescription
+    );
+
     await connection.commit();
+
+    for (const userId in userSockets) {
+      const userSocket = userSockets[userId];
+
+      if (
+        userSocket.storeId === store_id &&
+        userSocket.userType !== "Customer"
+      ) {
+        io.to(userSocket.socketId).emit("notificationsModule", {
+          title: notificationType,
+          message: notificationDescription,
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -1810,5 +1876,20 @@ export const handleUpdateClearOneByOneNotificationsByCustomer = async (
     res.status(500).json({ error: "Error updating notification." });
   } finally {
     connection.release();
+  }
+};
+
+export const handleUpdateDeleteProfileImage = async (req, res, connection) => {
+  const { id } = req.params;
+  try {
+    console.log("Attempting to delete image with public_id:", id);
+
+    const result = await cloudinary.uploader.destroy(id);
+    console.log("Cloudinary Response:", result);
+
+    res.json({ message: "Image deleted successfully", result });
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    res.status(500).json({ message: "Error deleting image", error });
   }
 };

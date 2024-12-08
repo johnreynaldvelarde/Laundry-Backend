@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import http from "http"; // Import http to create an HTTP server
+import http from "http";
+import dotenv from "dotenv";
 
 // Import routes
 import authRoutes from "./routes/authRoutes.js";
@@ -25,6 +26,7 @@ import { setupSocketIO } from "./socket/socket.js";
 
 const app = express();
 const port = process.env.PORT || 3002;
+dotenv.config();
 
 const allowedOrigins = [
   process.env.NODE_ENV === "production"
