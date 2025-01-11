@@ -411,8 +411,9 @@ export const handleSetWalkInRequest = async (req, res, connection) => {
         assigned_by,
         weight,
         assigned_at,
-        isAssignmentStatus
-      ) VALUES (?, ?, ?, ?, NOW(), 0)
+        isAssignmentStatus,
+        isCompleted
+      ) VALUES (?, ?, ?, ?, NOW(), 0, 0)
     `;
 
     const [result] = await connection.execute(assignmentQuery, [
