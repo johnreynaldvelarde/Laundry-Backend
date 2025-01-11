@@ -1,7 +1,7 @@
 export const handleGetTransactionHistory = async (req, res, db) => {
   const { id } = req.params; // Store ID
 
-  console.log(id); // Debugging: Check the store ID
+  //console.log(id); // Debugging: Check the store ID
 
   try {
     const query = `

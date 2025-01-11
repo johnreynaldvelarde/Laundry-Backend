@@ -1080,43 +1080,82 @@ export const handleGetCalculatedTransaction = async (req, res, connection) => {
 
     const transactionId = generateTransactionId();
 
-    const query = `
-      SELECT 
-        la.id AS laundry_assignment_id,
-        sr.id AS service_request_id,
-        st.default_price,
-        la.weight,
-        sp.discount_price,
-        sp.valid_days,
-        sp.start_date,
-        sp.end_date,
-        sp.isActive,
-        GROUP_CONCAT(inv.item_id SEPARATOR ', ') AS item_ids,
-        GROUP_CONCAT(inv.price SEPARATOR ', ') AS item_prices,
-        GROUP_CONCAT(it.item_name SEPARATOR ', ') AS item_names,
-        GROUP_CONCAT(ri.quantity SEPARATOR ', ') AS quantities,
-        GROUP_CONCAT(ri.amount SEPARATOR ', ') AS related_item_totals,
-        SUM(ri.amount) AS total_related_items
+    // const query = `
+    //   SELECT
+    //     la.id AS laundry_assignment_id,
+    //     sr.id AS service_request_id,
+    //     st.default_price,
+    //     la.weight,
+    //     sp.discount_price,
+    //     sp.valid_days,
+    //     sp.start_date,
+    //     sp.end_date,
+    //     sp.isActive,
+    //     GROUP_CONCAT(inv.item_id SEPARATOR ', ') AS item_ids,
+    //     GROUP_CONCAT(inv.price SEPARATOR ', ') AS item_prices,
+    //     GROUP_CONCAT(it.item_name SEPARATOR ', ') AS item_names,
+    //     GROUP_CONCAT(ri.quantity SEPARATOR ', ') AS quantities,
+    //     GROUP_CONCAT(ri.amount SEPARATOR ', ') AS related_item_totals,
+    //     SUM(ri.amount) AS total_related_items
+    //   FROM
+    //     Laundry_Assignment la
+    //   INNER JOIN
+    //     Service_Request sr ON la.service_request_id = sr.id
+    //   INNER JOIN
+    //     Service_Type st ON sr.service_type_id = st.id
+    //   LEFT JOIN
+    //     Service_Promo sp ON st.id = sp.service_id
+    //   LEFT JOIN
+    //     Related_Item ri ON la.id = ri.assignment_id
+    //   LEFT JOIN
+    //     Inventory inv ON ri.inventory_id = inv.id
+    //   LEFT JOIN
+    //     Item it ON inv.item_id = it.id
+    //   WHERE
+    //     la.id = ?
+    //     AND (sp.isActive = 1 OR sp.id IS NULL OR sp.isActive = 0)
+    //     AND (sp.start_date IS NULL OR CURRENT_DATE BETWEEN sp.start_date AND sp.end_date)
+    //   GROUP BY la.id;
+    // `;
+
+    const query = `SELECT 
+          la.id AS laundry_assignment_id,
+          sr.id AS service_request_id,
+          st.default_price,
+          la.weight,
+          sp.discount_price,
+          sp.valid_days,
+          sp.start_date,
+          sp.end_date,
+          sp.isActive,
+          GROUP_CONCAT(inv.item_id SEPARATOR ', ') AS item_ids,
+          GROUP_CONCAT(inv.price SEPARATOR ', ') AS item_prices,
+          GROUP_CONCAT(it.item_name SEPARATOR ', ') AS item_names,
+          GROUP_CONCAT(ri.quantity SEPARATOR ', ') AS quantities,
+          GROUP_CONCAT(ri.amount SEPARATOR ', ') AS related_item_totals,
+          SUM(ri.amount) AS total_related_items
       FROM 
-        Laundry_Assignment la
+          Laundry_Assignment la
       INNER JOIN 
-        Service_Request sr ON la.service_request_id = sr.id
+          Service_Request sr ON la.service_request_id = sr.id
       INNER JOIN 
-        Service_Type st ON sr.service_type_id = st.id
+          Service_Type st ON sr.service_type_id = st.id
       LEFT JOIN 
-        Service_Promo sp ON st.id = sp.service_id
+          Service_Promo sp ON st.id = sp.service_id
       LEFT JOIN 
-        Related_Item ri ON la.id = ri.assignment_id
+          Related_Item ri ON la.id = ri.assignment_id
       LEFT JOIN 
-        Inventory inv ON ri.inventory_id = inv.id
+          Inventory inv ON ri.inventory_id = inv.id
       LEFT JOIN
-        Item it ON inv.item_id = it.id
+          Item it ON inv.item_id = it.id
       WHERE 
-        la.id = ?
-        AND (sp.isActive = 1 OR sp.id IS NULL OR sp.isActive = 0)
-        AND (sp.start_date IS NULL OR CURRENT_DATE BETWEEN sp.start_date AND sp.end_date)
-      GROUP BY la.id;
-    `;
+          la.id = ?
+          AND (sp.isActive = 1 OR sp.id IS NULL OR sp.isActive = 0)
+          AND (sp.start_date IS NULL OR CURRENT_DATE BETWEEN sp.start_date AND sp.end_date)
+      GROUP BY 
+          la.id, sr.id, st.default_price, la.weight, sp.discount_price, 
+          sp.valid_days, sp.start_date, sp.end_date, sp.isActive;
+      `;
 
     const [rows] = await connection.execute(query, [id]);
 
